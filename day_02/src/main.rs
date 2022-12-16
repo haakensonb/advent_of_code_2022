@@ -1,35 +1,21 @@
 use std::fs;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
-enum Shape {
+pub enum Shape {
     Rock,
     Paper,
     Scissors,
 }
 
-#[derive(Debug)]
-enum EndState {
+#[derive(Debug, Clone, Copy)]
+pub enum EndState {
     Unkown,
     Loss,
     Draw,
     Win,
 }
 
-struct GameRound {
-    opponent: Shape,
-    player: Shape,
-    end_state: EndState,
-}
-
-impl GameRound {
-    fn new(opponent_letter: &str, player_letter: &str) -> GameRound {
-        GameRound {
-            opponent: GameRound::letter_to_shape(opponent_letter),
-            player: GameRound::letter_to_shape(player_letter),
-            end_state: EndState::Unkown,
-        }
-    }
-
+pub trait GameRound {
     fn letter_to_shape(letter: &str) -> Shape {
         match letter {
             "A" => Shape::Rock,
@@ -39,6 +25,54 @@ impl GameRound {
             "X" => Shape::Rock,
             "Z" => Shape::Scissors,
             _ => panic!("Invalid input shape!"),
+        }
+    }
+
+    fn letter_to_end_state(letter: &str) -> EndState {
+        match letter {
+            "X" => EndState::Loss,
+            "Y" => EndState::Draw,
+            "Z" => EndState::Win,
+            _ => panic!("Invalid input shape!"),
+        }
+    }
+
+    fn end_state_to_score(&self, end_state: EndState) -> u32 {
+        match end_state {
+            EndState::Loss => 0,
+            EndState::Draw => 3,
+            EndState::Win => 6,
+            _ => 0,
+        }
+    }
+
+    fn shape_to_score(&self, shape: Shape) -> u32 {
+        match shape {
+            Shape::Rock => 1,
+            Shape::Paper => 2,
+            Shape::Scissors => 3,
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+struct Part1Round {
+    opponent: Shape,
+    player: Shape,
+    end_state: EndState,
+}
+
+impl GameRound for Part1Round {}
+
+impl Part1Round {
+    fn new(input_line: String) -> Part1Round {
+        let split_line: Vec<&str> = input_line.split(" ").collect();
+        let opponent_letter = split_line[0];
+        let player_letter = split_line[1];
+        Part1Round {
+            opponent: <Part1Round as GameRound>::letter_to_shape(opponent_letter),
+            player: <Part1Round as GameRound>::letter_to_shape(player_letter),
+            end_state: EndState::Unkown,
         }
     }
 
@@ -54,42 +88,25 @@ impl GameRound {
         }
     }
 
-    fn get_round_score(&self) -> u32 {
-        match self.end_state {
-            EndState::Loss => 0,
-            EndState::Draw => 3,
-            EndState::Win => 6,
-            _ => 0,
-        }
-    }
-
-    fn get_player_shape_score(&self) -> u32 {
-        match self.player {
-            Shape::Rock => 1,
-            Shape::Paper => 2,
-            Shape::Scissors => 3,
-        }
-    }
-
     fn get_total_score(&mut self) -> u32 {
         self.play_round();
-        self.get_round_score() + self.get_player_shape_score()
+        self.shape_to_score(self.player) + self.end_state_to_score(self.end_state)
     }
 }
 
-fn parse_input(filepath: &str) -> Vec<GameRound> {
+fn parse_input(filepath: &str) -> Vec<String> {
     let data = fs::read_to_string(filepath).expect("Could not read file");
-    let lines: Vec<&str> = data.trim().split("\n").collect();
-    let mut game_rounds: Vec<GameRound> = Vec::new();
-    for line in lines {
-        let split_line: Vec<&str> = line.split(" ").collect();
-        game_rounds.push(GameRound::new(split_line[0], split_line[1]));
-    }
-    game_rounds
+    let lines: Vec<String> = data.trim().split("\n").map(|s| s.to_string()).collect();
+    lines
 }
 
 fn part_1(filepath: &str) -> u32 {
-    let mut game_rounds: Vec<GameRound> = parse_input(filepath);
+    let lines: Vec<String> = parse_input(filepath);
+    let mut game_rounds: Vec<Part1Round> = Vec::new();
+    for line in lines {
+        let round = Part1Round::new(line);
+        game_rounds.push(round);
+    }
     game_rounds.iter_mut().map(|x| x.get_total_score()).sum()
 }
 
@@ -106,4 +123,8 @@ mod tests {
     fn part_1_test() {
         assert_eq!(part_1("./test_input.txt"), 15);
     }
+
+    // fn part_2_test() {
+    //     assert_eq!(part2("./test_input.txt"), 12)
+    // }
 }
