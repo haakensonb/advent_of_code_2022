@@ -25,9 +25,14 @@ impl TryFrom<&str> for Pair {
 }
 
 impl Pair {
-    fn has_overlap(&self) -> bool {
+    fn has_full_overlap(&self) -> bool {
         ((self.s1_start <= self.s2_start) && (self.s1_end >= self.s2_end))
             || ((self.s2_start <= self.s1_start) && (self.s2_end >= self.s1_end))
+    }
+
+    // see: https://stackoverflow.com/questions/325933/determine-whether-two-date-ranges-overlap
+    fn has_partial_overlap(&self) -> bool {
+        self.s1_start <= self.s2_end && self.s1_end >= self.s2_start
     }
 }
 
@@ -35,14 +40,26 @@ fn part_1(data: &str) -> usize{
     let pairs: Vec<Pair> = data.lines().filter_map(|line| Pair::try_from(line).ok()).collect();
     pairs
         .iter()
-        .filter(|p| p.has_overlap())
+        .filter(|p| p.has_full_overlap())
+        .count()
+}
+
+fn part_2(data: &str) -> usize{
+    let pairs: Vec<Pair> = data.lines().filter_map(|line| Pair::try_from(line).ok()).collect();
+    pairs
+        .iter()
+        .filter(|p| p.has_partial_overlap())
         .count()
 }
 
 fn main() {
     let data = fs::read_to_string("input.txt").expect("Input file can't be read");
+
     let answer_1 = part_1(&data);
     println!("Part 1: {}", answer_1);
+
+    let answer_2 = part_2(&data);
+    println!("Part 2: {}", answer_2);
 }
 
 #[cfg(test)]
@@ -53,5 +70,11 @@ mod tests {
     fn test_part_1() {
         let data = fs::read_to_string("test_input.txt").expect("Input file can't be read");
         assert_eq!(part_1(&data), 2);
+    }
+
+    #[test]
+    fn test_part_2() {
+        let data = fs::read_to_string("test_input.txt").expect("Input file can't be read");
+        assert_eq!(part_2(&data), 4);
     }
 }
