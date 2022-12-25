@@ -1,78 +1,56 @@
-/* Thoughts:
-- Each line of letters should be split in half into two compartments
-- Want to identify letters that appear in both compartments for a line
-    - This can be found easily using intersection, if both compartments are sets
-- Should have a function to convert a letter to integer priority
-- Want the sum of priorities of all these intersection letters
-*/
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::fs;
 
-fn file_to_rucksacks(filepath: &str) -> Vec<Vec<char>> {
-    let file_contents = fs::read_to_string(filepath).expect("Could not read file");
-    let lines: Vec<&str> = file_contents.trim().split("\n").collect();
-    let mut rucksacks: Vec<Vec<char>> = Vec::new();
-    for line in lines.iter() {
-        let chars: Vec<char> = line.chars().collect();
-        rucksacks.push(chars);
-    }
-    rucksacks
-}
-
 fn char_to_priority(c: char) -> u32 {
-    let lowercase: [char; 26] = [
-        'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r',
-        's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
-    ];
-    let uppercase: [char; 26] = lowercase.map(|c| c.to_ascii_uppercase());
-    let chars = [lowercase, uppercase].concat();
-    let mut priorities: HashMap<char, u32> = HashMap::new();
-    let mut priority: u32 = 1;
-    for c in chars.iter() {
-        priorities.insert(*c, priority);
-        priority += 1;
+    let alphabet: Vec<char> = ('a'..='z').chain('A'..='Z').collect();
+    let priorities: Vec<u32> = (1..=52).collect();
+    let index = alphabet.iter().position(|&x| x == c).unwrap();
+    *priorities.get(index).unwrap()
+}
+
+fn get_intersecting_char(sets: Vec<HashSet<char>>) -> char {
+    let intersecting_char_set = sets.into_iter().reduce(|a, b| a.intersection(&b).cloned().collect()).unwrap();
+    *intersecting_char_set.iter().next().unwrap()
+}
+
+fn part_1(data: String) -> u32 {
+    let lines: Vec<Vec<char>> = data.lines().map(|line| line.chars().collect()).collect();
+    let mut priorities = 0u32;
+    for line in &lines {
+        let split = line.split_at(line.len() / 2);
+        let compartments: Vec<HashSet<char>> = vec![split.0.iter().cloned().collect(), split.1.iter().cloned().collect()];
+        let intersecting_char = get_intersecting_char(compartments);
+        let priority = char_to_priority(intersecting_char);
+        priorities += priority;
     }
-    *priorities.get(&c).unwrap()
+    return priorities;
 }
 
-fn rucksack_to_compartments(rucksack: Vec<char>) -> (Vec<char>, Vec<char>) {
-    let compartments = rucksack.split_at(rucksack.len() / 2);
-    (compartments.0.to_vec(), compartments.1.to_vec())
-}
-
-fn get_compartments_intersection(compartments: (Vec<char>, Vec<char>)) -> Vec<char> {
-    let first_compartment: HashSet<_> = HashSet::from_iter(compartments.0);
-    let second_compartment: HashSet<_> = HashSet::from_iter(compartments.1);
-    let intersection: HashSet<_> = first_compartment
-        .intersection(&second_compartment)
+fn part_2(data: String) -> u32 {
+    let lines: Vec<HashSet<char>> = data
+        .lines()
+        .map(|line| line.chars().collect())
         .collect();
-    let intersecting_chars: Vec<char> = intersection.into_iter().cloned().collect();
-    intersecting_chars
-}
 
-fn rucksacks_to_priorities(rucksacks: Vec<Vec<char>>) -> Vec<u32> {
-    let mut priorities: Vec<u32> = Vec::new();
-    for rucksack in rucksacks {
-        let compartments = rucksack_to_compartments(rucksack);
-        let intersecting_chars = get_compartments_intersection(compartments);
-        let priority: u32 = intersecting_chars
-            .iter()
-            .map(|c| char_to_priority(*c))
-            .sum();
-        priorities.push(priority);
-    }
-    priorities
-}
-
-fn part_1(filepath: &str) -> u32 {
-    let rucksacks = file_to_rucksacks(filepath);
-    let priorities: Vec<u32> = rucksacks_to_priorities(rucksacks);
-    priorities.iter().sum()
+    lines
+        .chunks(3)
+        .map(|x| -> u32 {
+            let sets: Vec<HashSet<char>> = x.to_vec();
+            let intersecting_char = get_intersecting_char(sets);
+            char_to_priority(intersecting_char)
+        })
+        .sum()
 }
 
 fn main() {
-    let answer_1 = part_1("input.txt");
+    let data_1 = fs::read_to_string("input.txt").expect("Could not read file");
+    let answer_1 = part_1(data_1);
     println!("Part 1: {}", answer_1);
+
+
+    let data_2 = fs::read_to_string("input.txt").expect("Could not read file");
+    let answer_2 = part_2(data_2);
+    println!("Part 2: {}", answer_2);
 }
 
 #[cfg(test)]
@@ -81,7 +59,14 @@ mod tests {
 
     #[test]
     fn test_part_1() {
-        assert_eq!(part_1("test_input.txt"), 157);
+        let data = fs::read_to_string("test_input.txt").expect("Could not read file");
+        assert_eq!(part_1(data), 157);
+    }
+
+    #[test]
+    fn test_part_2() {
+        let data = fs::read_to_string("test_input.txt").expect("Could not read file");
+        assert_eq!(part_2(data), 70);
     }
 
     #[test]
@@ -93,21 +78,12 @@ mod tests {
     }
 
     #[test]
-    fn test_rucksack_to_compartments() {
-        let rucksack: Vec<char> = "vJrwpWtwJgWrhcsFMMfFFhFp".chars().collect();
-        let expected_first_compartment: Vec<char> = "vJrwpWtwJgWr".chars().collect();
-        let expected_second_compartment: Vec<char> = "hcsFMMfFFhFp".chars().collect();
-        let compartments = rucksack_to_compartments(rucksack);
-        assert_eq!(expected_first_compartment, compartments.0);
-        assert_eq!(expected_second_compartment, compartments.1);
-    }
-
-    #[test]
-    fn test_get_compartments_intersection() {
-        let rucksack: Vec<char> = "vJrwpWtwJgWrhcsFMMfFFhFp".chars().collect();
-        let compartments = rucksack_to_compartments(rucksack);
-        let intersecting_chars = get_compartments_intersection(compartments);
-        let c = intersecting_chars.first().unwrap();
-        assert_eq!(*c, 'p');
+    fn test_get_intersecting_char() {
+        let set_a = HashSet::from(['a', 'b', 'c']);
+        let set_b = HashSet::from(['b', 'd', 'e']);
+        let set_c = HashSet::from(['f', 'g', 'b']);
+        let sets: Vec<HashSet<_>> = vec![set_a, set_b, set_c];
+        let intersecting_char = get_intersecting_char(sets);
+        assert_eq!(intersecting_char, 'b');
     }
 }
