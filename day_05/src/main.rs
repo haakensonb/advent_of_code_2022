@@ -24,7 +24,7 @@ fn parse_and_create_stacks(stack_input: &str) -> Vec<Vec<char>> {
     stacks
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Move {
     num_times: u32,
     from: usize,
@@ -43,23 +43,43 @@ fn parse_moves(moves_input: &str) -> Vec<Move> {
     moves
 }
 
-fn execute_move(stacks: &mut Vec<Vec<char>>, m: &Move) {
+fn execute_move_part_1(stacks: &mut Vec<Vec<char>>, m: &Move) {
     for _ in 0 .. m.num_times {
         let popped = stacks[m.from].pop().unwrap();
         stacks[m.to].push(popped);
     }
 }
 
-fn execute_moves(stacks: &mut Vec<Vec<char>>, moves: &Vec<Move>) {
-    for m in moves {
-        execute_move(stacks, m)
+fn execute_move_part_2(stacks: &mut Vec<Vec<char>>, m: &Move) {
+    let mut char_group: Vec<char> = Vec::new();
+
+    for _ in 0 .. m.num_times {
+        let popped = stacks[m.from].pop().unwrap();
+        char_group.push(popped);
+    }
+
+    for c in char_group.iter().rev() {
+        stacks[m.to].push(*c);
     }
 }
 
-fn part_1(stacks: &mut Vec<Vec<char>>, moves: &Vec<Move>) -> String {
-    execute_moves(stacks, moves);
+fn get_top_of_each_stack(stacks: &Vec<Vec<char>>) -> String {
     let tops: Vec<String> = stacks.iter().map(|s| s[s.len()-1].to_string()).collect();
     tops.join("")
+}
+
+fn part_1(stacks: &mut Vec<Vec<char>>, moves: &Vec<Move>) -> String {
+    for m in moves {
+        execute_move_part_1(stacks, m)
+    }
+    get_top_of_each_stack(stacks)
+}
+
+fn part_2(stacks: &mut Vec<Vec<char>>, moves: &Vec<Move>) -> String {
+    for m in moves {
+        execute_move_part_2(stacks, m)
+    }
+    get_top_of_each_stack(stacks)
 }
 
 fn main() {
@@ -69,11 +89,13 @@ fn main() {
     let moves_input = split_data.next().unwrap();
 
     let mut stacks: Vec<Vec<char>> = parse_and_create_stacks(stack_input);
-    // println!("stacks: {:?}", stacks);
-
     let moves: Vec<Move> = parse_moves(moves_input);
-    // println!("moves: {:?}", moves);
+    let mut stacks_2 = stacks.clone();
+    let moves_2 = moves.clone();
 
     let answer_1 = part_1(&mut stacks, &moves);
     println!("Part 1: {}", answer_1);
+
+    let answer_2 = part_2(&mut stacks_2, &moves_2);
+    println!("Part 2: {}", answer_2);
 }
